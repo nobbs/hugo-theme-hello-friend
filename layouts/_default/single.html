@@ -52,6 +52,10 @@
       </figure>
     {{ end }}
 
+
+    {{ if .Params.encrypt }}
+      {{ partial "encrypted.html" . }}
+    {{ else }}
     <div class="post-content">
       {{ if or .Params.Toc $.Site.Params.Toc }}
         <h2>Table of Contents</h2>
@@ -59,6 +63,7 @@
       {{ end }}
       {{ .Content }}
     </div>
+    {{end}}
     {{ if eq .Type $.Site.Params.contentTypeName }}
       {{ if or .NextInSection .PrevInSection }}
         <div class="pagination">

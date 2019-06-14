@@ -1,0 +1,91 @@
+      <div class="post-content">
+        {{if .Params.encryptHint }}
+          <p>{{ .Params.encryptHint | markdownify }}</p>
+        {{ else }}
+          <p>The following content is password protected.</p>
+        {{ end }}
+        <div class='hugo-encryptor-form'>
+          <form action="javascript:;" onsubmit="hugoDecrypt(CryptoJS.MD5(document.getElementById('hugo-encryptor-password').value).toString(),'input')">
+          <input
+            class="hugo-encryptor-input"
+            id="hugo-encryptor-password"
+            placeholder='Please input the password'
+          />
+          <input
+            class="hugo-encryptor-button"
+            type="submit"
+            value='submit'
+          />
+        </form>
+        </div>
+        <cipher-text data-password="{{ .Params.encrypt }}" style="display:none;">
+        <p id="verifyText" style="display:none;">
+          The quick brown fox jumps over the lazy dog
+        </p>
+        {{ .Content }}
+      </cipher-text>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.js"></script>
+  <script>
+      let cipher = document.getElementsByTagName("cipher-text")[0];
+      const storageKey = location.pathname + "password";
+      const userStorage = {{ if .Site.Params.hugoEncryptorStorage }} window['{{.Site.Params.hugoEncryptorStorage}}Storage'] {{ else }} localStorage {{ end }};
+      /**
+       * @name: decrypt
+       * @description: decrypt cipher text by password
+       * @param {String} cipher_text
+       * @param {String} password
+       * @return:{String} decryptedData
+       */
+      const decrypt = function(cipher_text, password) {
+        let key = CryptoJS.enc.Utf8.parse(password);
+        let iv = CryptoJS.enc.Utf8.parse(password.substr(16));
+
+        let decryptedData = CryptoJS.AES.decrypt(cipher_text, key, {
+          iv: iv,
+          mode: CryptoJS.mode.CBC,
+          padding: CryptoJS.pad.Pkcs7
+        });
+        return decryptedData.toString(CryptoJS.enc.Utf8);
+      };
+      /**
+       * @name:hugoDecrypt
+       * @description: judge the password ,and decrypt post
+       * @param {String} password
+       * @param {String} type
+       */
+      const hugoDecrypt = function(password, type) {
+        try {
+          let cipher_text = cipher.innerText;
+          let decrypted_text = decrypt(cipher_text, password);
+          if (
+            decrypted_text.includes("The quick brown fox jumps over the lazy dog")
+          ) {
+            cipher.parentElement.innerHTML = decrypted_text;
+            userStorage.setItem(storageKey, password);
+            document.getElementById("verifyText").outerHTML = "";
+            Prism.highlightAll();
+          } else {
+            if (type === "input") {
+              alert('Wrong password');
+            } else if (type === "storage") {
+              userStorage.removeItem(storageKey);
+            }
+          }
+        } catch (error) {
+          // console.log(error);
+          if (type === "input") {
+            alert('Wrong password');
+          } else if (type === "storage") {
+            userStorage.removeItem(location.pathname + "password");
+          }
+        }
+      };
+  </script>
+  <script>
+    window.onload = () => {
+      if (userStorage.getItem(storageKey)) {
+        hugoDecrypt(userStorage.getItem(storageKey), "storage");
+      }
+    };
+  </script>
+      </div>
